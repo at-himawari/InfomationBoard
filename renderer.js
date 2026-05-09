@@ -1,9 +1,11 @@
 const state = {
   lastNews: [],
+  marketNews: [],
   lastMarkets: [],
   lastQuakes: [],
   weather: null,
-  newsIndex: 0
+  newsIndex: 0,
+  marketNewsIndex: 0
 };
 
 const formatTime = new Intl.DateTimeFormat("ja-JP", {
@@ -29,16 +31,19 @@ function start() {
   tickClock();
   renderNowPanel();
   refreshNews();
+  refreshMarketNews();
   refreshMarkets();
   refreshQuakes();
   refreshWeather();
 
   setInterval(tickClock, 1000);
   setInterval(refreshNews, 180000);
+  setInterval(refreshMarketNews, 180000);
   setInterval(refreshMarkets, 10000);
   setInterval(refreshQuakes, 30000);
   setInterval(refreshWeather, 600000);
   setInterval(advanceNews, 8000);
+  setInterval(advanceMarketNews, 7000);
 }
 
 function handleKeydown(event) {
@@ -65,14 +70,28 @@ async function refreshNews() {
   }
 }
 
+async function refreshMarketNews() {
+  try {
+    state.marketNews = await window.hud.getMarketNews();
+    state.marketNewsIndex = 0;
+    renderNowPanel();
+  } catch (error) {
+    renderNowPanel();
+  }
+}
+
 async function refreshMarkets() {
   try {
-    state.lastMarkets = await window.hud.getMarkets();
+    const markets = await window.hud.getMarkets();
+    if (!markets.length) throw new Error("No market rows");
+    state.lastMarkets = markets;
     renderMarkets();
     text("#marketUpdated", `MARKETS ${formatDateTime.format(new Date())}`);
     renderNowPanel();
   } catch (error) {
-    renderError("#markets", "市況を取得できません");
+    if (!state.lastMarkets.length) renderError("#markets", "市況を取得できません");
+    text("#marketUpdated", `MARKETS RETRY ${formatDateTime.format(new Date())}`);
+    renderNowPanel();
   }
 }
 
@@ -99,13 +118,22 @@ async function refreshWeather() {
 }
 
 function renderNowPanel() {
-  text("#marketPulse", buildMarketPulse());
+  text("#marketPulse", buildMarketHeadline());
   text("#topNews", state.lastNews[0]?.title || "ニュースを取得しています。");
   text("#quakeWatch", buildQuakeWatch());
 }
 
+function buildMarketHeadline() {
+  if (state.marketNews.length) {
+    const item = state.marketNews[state.marketNewsIndex % state.marketNews.length];
+    return item.title;
+  }
+
+  return buildMarketPulse();
+}
+
 function buildMarketPulse() {
-  if (!state.lastMarkets.length) return "市況を取得しています。";
+  if (!state.lastMarkets.length) return "市況を取得できません。再試行中です。";
 
   const sorted = [...state.lastMarkets].sort(
     (a, b) => Math.abs(Number(b.changePercent)) - Math.abs(Number(a.changePercent))
@@ -225,6 +253,12 @@ function advanceNews() {
   if (!state.lastNews.length) return;
   state.newsIndex = (state.newsIndex + 1) % state.lastNews.length;
   renderNews();
+  renderNowPanel();
+}
+
+function advanceMarketNews() {
+  if (!state.marketNews.length) return;
+  state.marketNewsIndex = (state.marketNewsIndex + 1) % state.marketNews.length;
   renderNowPanel();
 }
 

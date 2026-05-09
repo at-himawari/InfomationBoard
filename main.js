@@ -1,8 +1,16 @@
 const { app, BrowserWindow, ipcMain, screen } = require("electron");
 
 const NEWS_RSS_URL = "https://www3.nhk.or.jp/rss/news/cat0.xml";
+const MARKET_NEWS_RSS_URL = "https://www3.nhk.or.jp/rss/news/cat5.xml";
 const EARTHQUAKE_URL = "https://api.p2pquake.net/v2/history?codes=551&limit=5";
-const MARKET_SYMBOLS = ["usdjpy", "eurjpy", "^nkx", "^spx", "aapl.us", "tsla.us"];
+const MARKET_SYMBOLS = [
+  { symbol: "USDJPY=X", label: "USD/JPY" },
+  { symbol: "EURJPY=X", label: "EUR/JPY" },
+  { symbol: "^N225", label: "日経平均" },
+  { symbol: "^GSPC", label: "S&P 500" },
+  { symbol: "AAPL", label: "Apple" },
+  { symbol: "TSLA", label: "Tesla" }
+];
 const WEATHER_CITY = process.env.HUD_WEATHER_CITY || "札幌";
 const WEATHER_LAT = process.env.HUD_WEATHER_LAT || "43.0642";
 const WEATHER_LON = process.env.HUD_WEATHER_LON || "141.3469";
@@ -84,12 +92,21 @@ ipcMain.handle("hud:getNews", async () => {
   return parseRss(xml).slice(0, 8);
 });
 
+ipcMain.handle("hud:getMarketNews", async () => {
+  const xml = await fetchText(MARKET_NEWS_RSS_URL);
+  return parseRss(xml).slice(0, 8);
+});
+
 ipcMain.handle("hud:getMarkets", async () => {
   const rows = await Promise.allSettled(
-    MARKET_SYMBOLS.map(async (symbol) => {
-      const url = `https://stooq.com/q/l/?s=${encodeURIComponent(symbol)}&f=sd2t2ohlcv&h&e=csv`;
-      const csv = await fetchText(url);
-      return parseStooq(csv)[0];
+    MARKET_SYMBOLS.map(async (market) => {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+        market.symbol
+      )}?range=1d&interval=5m`;
+      const res = await fetch(url, { headers: { "user-agent": "sub-display-hud" } });
+      if (!res.ok) throw new Error(`Market API failed: ${res.status}`);
+      const json = await res.json();
+      return parseYahooMarket(json, market);
     })
   );
 
@@ -171,40 +188,26 @@ function parseRss(xml) {
   });
 }
 
-function parseStooq(csv) {
-  const lines = csv.trim().split(/\r?\n/);
-  const headers = lines.shift().split(",");
-  const rows = lines.map((line) => {
-    const values = line.split(",");
-    return Object.fromEntries(headers.map((header, index) => [header, values[index]]));
-  });
+function parseYahooMarket(json, market) {
+  const result = json.chart?.result?.[0];
+  const meta = result?.meta;
+  if (!meta) return null;
 
-  return rows
-    .filter((row) => row.Close && row.Close !== "N/D")
-    .map((row) => {
-      const open = Number(row.Open);
-      const close = Number(row.Close);
-      const change = Number.isFinite(open) && open !== 0 ? ((close - open) / open) * 100 : 0;
-      return {
-        symbol: row.Symbol,
-        label: labelMarket(row.Symbol),
-        price: close,
-        changePercent: change,
-        time: `${row.Date || ""} ${row.Time || ""}`.trim()
-      };
-    });
-}
+  const price = Number(meta.regularMarketPrice);
+  const previous = Number(meta.chartPreviousClose || meta.previousClose);
+  const change = Number.isFinite(previous) && previous !== 0 ? ((price - previous) / previous) * 100 : 0;
 
-function labelMarket(symbol) {
-  const labels = {
-    usdjpy: "USD/JPY",
-    eurjpy: "EUR/JPY",
-    "^nkx": "日経平均",
-    "^spx": "S&P 500",
-    "aapl.us": "Apple",
-    "tsla.us": "Tesla"
+  if (!Number.isFinite(price)) return null;
+
+  return {
+    symbol: market.symbol,
+    label: market.label,
+    price,
+    changePercent: change,
+    time: meta.regularMarketTime
+      ? new Date(meta.regularMarketTime * 1000).toISOString()
+      : new Date().toISOString()
   };
-  return labels[symbol.toLowerCase()] || symbol.toUpperCase();
 }
 
 function formatJmaScale(points = []) {
