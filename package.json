@@ -6,9 +6,39 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron ."
+    "dev": "electron .",
+    "package": "electron-builder --mac dir",
+    "dist": "electron-builder --mac dmg"
+  },
+  "build": {
+    "appId": "local.sub-display-hud",
+    "productName": "Sub Display HUD",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "dir",
+        "dmg"
+      ],
+      "identity": null
+    },
+    "dmg": {
+      "sign": false
+    },
+    "directories": {
+      "output": "dist"
+    }
   },
   "devDependencies": {
-    "electron": "^31.7.7"
+    "electron": "^31.7.7",
+    "electron-builder": "^26.8.1"
   }
 }

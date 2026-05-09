@@ -17,6 +17,26 @@ HUD_FULLSCREEN=1 npm run dev
 
 `F11` または `control + command + F`、画面のダブルクリックでフルスクリーンを切り替えられます。
 
+## 実行ファイル化
+
+macOSアプリとして固める場合:
+
+```bash
+npm run package
+```
+
+作成先:
+
+```text
+dist/mac/Sub Display HUD.app
+```
+
+配布用DMGを作る場合:
+
+```bash
+npm run dist
+```
+
 ## 機能
 
 - 左側のNOWパネルに時刻、日付、市況の要点、トップニュース、地震ウォッチを表示
