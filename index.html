@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HUD</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="hud-shell">
+      <section class="activity-panel">
+        <div class="panel-header">
+          <span>NOW</span>
+          <time id="clock">--:--</time>
+        </div>
+
+        <div class="now-stack">
+          <div>
+            <div id="todayDate" class="date-line">--</div>
+            <p id="marketPulse" class="pulse-text">市況を取得しています。</p>
+          </div>
+
+          <div class="spotlight">
+            <span class="spotlight-label">TOP NEWS</span>
+            <strong id="topNews">ニュースを取得しています。</strong>
+          </div>
+
+          <div class="spotlight alert">
+            <span class="spotlight-label">QUAKE WATCH</span>
+            <strong id="quakeWatch">地震情報を取得しています。</strong>
+          </div>
+        </div>
+
+        <div class="status-strip">
+          <span id="marketUpdated">MARKETS --</span>
+          <span id="newsUpdated">NEWS --</span>
+          <span id="quakeUpdated">QUAKE --</span>
+        </div>
+      </section>
+
+      <section class="grid-panel markets-panel">
+        <div class="panel-title">MARKETS</div>
+        <div id="markets" class="market-grid"></div>
+      </section>
+
+      <section class="grid-panel news-panel">
+        <div class="panel-title">NEWS</div>
+        <div class="news-stack">
+          <div id="news" class="feed-list news-list"></div>
+          <section class="weather-block">
+            <div class="weather-header">
+              <span>WEATHER</span>
+              <span id="weatherUpdated">--</span>
+            </div>
+            <div id="weather" class="weather-grid">
+              <div class="feed-muted">天気予報を取得しています</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="grid-panel quake-panel">
+        <div class="panel-title">EARTHQUAKE</div>
+        <div id="quakes" class="feed-list compact"></div>
+      </section>
+    </main>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>

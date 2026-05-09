@@ -1,0 +1,14 @@
+{
+  "name": "sub-display-hud",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A privacy-aware HUD for a secondary display.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^31.7.7"
+  }
+}
