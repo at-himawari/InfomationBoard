@@ -1,7 +1,8 @@
 const { app, BrowserWindow, ipcMain, screen } = require("electron");
 
 const NEWS_RSS_URL = "https://www3.nhk.or.jp/rss/news/cat0.xml";
-const MARKET_NEWS_RSS_URL = "https://www3.nhk.or.jp/rss/news/cat5.xml";
+const MARKET_NEWS_RSS_URL =
+  "https://news.google.com/rss/search?q=%E6%A0%AA%E4%BE%A1%20OR%20%E7%82%BA%E6%9B%BF%20OR%20%E6%97%A5%E7%B5%8C%E5%B9%B3%E5%9D%87%20OR%20NY%E5%B8%82%E5%A0%B4%20OR%20%E6%9D%B1%E4%BA%AC%E5%B8%82%E5%A0%B4&hl=ja&gl=JP&ceid=JP:ja";
 const EARTHQUAKE_URL = "https://api.p2pquake.net/v2/history?codes=551&limit=5";
 const MARKET_SYMBOLS = [
   { symbol: "USDJPY=X", label: "USD/JPY" },
@@ -127,6 +128,7 @@ ipcMain.handle("hud:getEarthquakes", async () => {
       area: hypo.name || "震源不明",
       magnitude: hypo.magnitude ?? null,
       depth: hypo.depth ?? null,
+      maxScaleValue: getMaxJmaScale(row.points),
       maxScale: formatJmaScale(row.points),
       points: (row.points || []).slice(0, 5).map((point) => point.addr).filter(Boolean)
     };
@@ -172,7 +174,15 @@ ipcMain.handle("hud:getWeather", async () => {
 });
 
 async function fetchText(url) {
-  const res = await fetch(url, { headers: { "user-agent": "sub-display-hud" } });
+  const requestUrl = new URL(url);
+  requestUrl.searchParams.set("_", String(Date.now()));
+  const res = await fetch(requestUrl, {
+    headers: {
+      "user-agent": "sub-display-hud",
+      "cache-control": "no-cache",
+      pragma: "no-cache"
+    }
+  });
   if (!res.ok) throw new Error(`Fetch failed: ${url} ${res.status}`);
   return res.text();
 }
@@ -211,7 +221,7 @@ function parseYahooMarket(json, market) {
 }
 
 function formatJmaScale(points = []) {
-  const max = points.reduce((value, point) => Math.max(value, Number(point.scale || 0)), 0);
+  const max = getMaxJmaScale(points);
   if (!max) return "不明";
   const table = {
     10: "1",
@@ -225,6 +235,10 @@ function formatJmaScale(points = []) {
     70: "7"
   };
   return table[max] || String(max);
+}
+
+function getMaxJmaScale(points = []) {
+  return points.reduce((value, point) => Math.max(value, Number(point.scale || 0)), 0);
 }
 
 function weatherLabel(code) {

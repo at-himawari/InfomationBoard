@@ -119,8 +119,14 @@ async function refreshWeather() {
 
 function renderNowPanel() {
   text("#marketPulse", buildMarketHeadline());
-  text("#topNews", state.lastNews[0]?.title || "ニュースを取得しています。");
-  text("#quakeWatch", buildQuakeWatch());
+  document.querySelector("#topNewsSpotlight").classList.add("is-hidden");
+
+  const quakeWatch = buildQuakeWatch();
+  const quakeSpotlight = document.querySelector("#quakeSpotlight");
+  const nowStack = document.querySelector("#nowStack");
+  quakeSpotlight.classList.toggle("is-hidden", !quakeWatch);
+  nowStack.classList.toggle("no-quake", !quakeWatch);
+  if (quakeWatch) text("#quakeWatch", quakeWatch);
 }
 
 function buildMarketHeadline() {
@@ -147,9 +153,9 @@ function buildMarketPulse() {
 }
 
 function buildQuakeWatch() {
-  const latest = state.lastQuakes[0];
-  if (!latest) return "直近の地震情報はありません。";
-  return `最新: 震度${latest.maxScale} / M${latest.magnitude ?? "?"} ${latest.area}`;
+  const strongQuake = state.lastQuakes.find((item) => getScaleValue(item) >= 45);
+  if (!strongQuake) return "";
+  return `震度${strongQuake.maxScale} / M${strongQuake.magnitude ?? "?"} ${strongQuake.area}`;
 }
 
 function renderMarkets() {
@@ -290,6 +296,17 @@ function formatNewsDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "NHK NEWS";
   return formatDateTime.format(date);
+}
+
+function getScaleValue(item) {
+  if (Number.isFinite(Number(item.maxScaleValue))) return Number(item.maxScaleValue);
+  const scale = String(item.maxScale || "");
+  if (scale === "5弱") return 45;
+  if (scale === "5強") return 50;
+  if (scale === "6弱") return 55;
+  if (scale === "6強") return 60;
+  if (scale === "7") return 70;
+  return Number(scale) * 10 || 0;
 }
 
 function weatherIcon(code) {
